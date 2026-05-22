@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}Quiz History - Quizzable{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Quiz History</h1>
+        <p class="page-subtitle">Track your performance and review past attempts.</p>
+    </div>
+</div>
+
+<div class="history-section">
+    <div class="history-list">
+        {% if history_items %}
+            {% for item in history_items %}
+                {% set percent = (item.score / (item.total_questions * 10)) * 100 %}
+                
+                <div class="history-item">
+                    <div class="history-info-left">
+                        <span class="history-title">{{ item.title }}</span>
+                        <div class="history-meta">
+                            <span>Attempted on {{ item.date }}</span>
+                            <span>{{ item.total_questions }} Questions</span>
+                        </div>
+                    </div>
+                    
+                    <div class="history-actions">
+                        <!-- Score Badge with color classification -->
+                        <span class="score-badge {% if percent >= 80 %}high{% elif percent >= 50 %}medium{% else %}low{% endif %}">
+                            Score: {{ item.score }} / {{ item.total_questions * 10 }} ({{ percent | round | int }}%)
+                        </span>
+                        
+                        <a href="{{ url_for('attempt_view', attempt_id=item.attempt_id) }}" class="btn btn-primary btn-sm" style="padding: 8px 16px; font-size: 0.85rem;">
+                            Review
+                        </a>
+                        
+                        <a href="{{ url_for('quiz_view', quiz_id=item.quiz_id) }}" class="btn btn-secondary btn-sm" style="padding: 8px 16px; font-size: 0.85rem;">
+                            Retake
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="card" style="text-align: center; padding: 48px; border-style: dashed; color: var(--text-dark);">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto 16px; opacity: 0.5;">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                <p style="font-size: 1.1rem; font-weight: 500; margin-bottom: 8px;">No Attempts Yet</p>
+                <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 24px;">You haven't attempted any quizzes yet. Go create one to get started!</p>
+                <a href="{{ url_for('create_quiz_view') }}" class="btn btn-primary" style="display: inline-flex;">Create a Quiz</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

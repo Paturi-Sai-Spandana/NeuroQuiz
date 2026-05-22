@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Quizzable{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-subtitle">Welcome back! Manage and track your generated quizzes.</p>
+    </div>
+    <a href="{{ url_for('create_quiz_view') }}" class="btn btn-primary">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Create New Quiz
+    </a>
+</div>
+
+<!-- Statistics Grid -->
+<div class="stats-grid">
+    <div class="card stat-card">
+        <div class="stat-icon">
+            <svg viewBox="0 0 24 24">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+        </div>
+        <div class="stat-info">
+            <span class="stat-label">Quizzes Generated</span>
+            <span class="stat-value">{{ total_quizzes }}</span>
+        </div>
+    </div>
+    
+    <div class="card stat-card">
+        <div class="stat-icon">
+            <svg viewBox="0 0 24 24">
+                <path d="M22 11.08V12a10 10 0 11-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+        </div>
+        <div class="stat-info">
+            <span class="stat-label">Total Quiz Attempts</span>
+            <span class="stat-value">{{ total_attempts }}</span>
+        </div>
+    </div>
+    
+    <div class="card stat-card">
+        <div class="stat-icon">
+            <svg viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 6v6l4 2"></path>
+            </svg>
+        </div>
+        <div class="stat-info">
+            <span class="stat-label">Average Score</span>
+            <span class="stat-value">{{ avg_score }}%</span>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Quizzes Section -->
+<div class="history-section">
+    <h2 class="section-title">Recent Quizzes</h2>
+    <div class="history-list">
+        {% if recent_quizzes %}
+            {% for quiz in recent_quizzes %}
+                <div class="history-item">
+                    <div class="history-info-left">
+                        <span class="history-title">{{ quiz.title }}</span>
+                        <div class="history-meta">
+                            <span>{{ quiz.questions|length }} Questions</span>
+                            <span>Generated on {{ quiz.created_at.strftime('%Y-%m-%d') }}</span>
+                        </div>
+                    </div>
+                    <div class="history-actions">
+                        <a href="{{ url_for('quiz_view', quiz_id=quiz.id) }}" class="btn btn-secondary btn-sm" style="padding: 8px 16px; font-size: 0.85rem;">Take Quiz</a>
+                        
+                        <!-- Export dropdown -->
+                        <div class="export-dropdown">
+                            <button class="btn btn-secondary btn-sm" style="padding: 8px 16px; font-size: 0.85rem; display: flex; align-items: center; gap: 4px;">
+                                Export
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            </button>
+                            <div class="export-dropdown-content">
+                                <a href="{{ url_for('export_quiz', quiz_id=quiz.id, format_type='txt') }}">Download TXT</a>
+                                <a href="{{ url_for('export_quiz', quiz_id=quiz.id, format_type='json') }}">Download JSON</a>
+                            </div>
+                        </div>
+                        
+                        <!-- Delete form -->
+                        <form action="{{ url_for('delete_quiz', quiz_id=quiz.id) }}" method="post" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this quiz? All history associated with it will be lost.');">
+                            <button type="submit" class="btn btn-danger btn-sm" style="padding: 8px 16px; font-size: 0.85rem;">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="card" style="text-align: center; padding: 48px; border-style: dashed; color: var(--text-dark);">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto 16px; opacity: 0.5;">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <p style="font-size: 1.1rem; font-weight: 500; margin-bottom: 8px;">No Quizzes Found</p>
+                <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 24px;">Create your first quiz using a PDF or text paste.</p>
+                <a href="{{ url_for('create_quiz_view') }}" class="btn btn-primary" style="display: inline-flex;">Create a Quiz</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

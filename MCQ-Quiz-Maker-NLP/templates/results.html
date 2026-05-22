@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+
+{% block title %}Quiz Results - {{ quiz.title }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Quiz Results</h1>
+        <p class="page-subtitle">Detailed feedback and review for <b>{{ quiz.title }}</b>.</p>
+    </div>
+    <div style="display: flex; gap: 12px; align-items: center;">
+        <a href="{{ url_for('quiz_view', quiz_id=quiz.id) }}" class="btn btn-secondary">
+            Retake Quiz
+        </a>
+        
+        <div class="export-dropdown">
+            <button class="btn btn-primary" style="display: flex; align-items: center; gap: 8px;">
+                Export Quiz
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="export-dropdown-content">
+                <a href="{{ url_for('export_quiz', quiz_id=quiz.id, format_type='txt') }}">Download TXT</a>
+                <a href="{{ url_for('export_quiz', quiz_id=quiz.id, format_type='json') }}">Download JSON</a>
+                <a href="javascript:window.print()">Print to PDF</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="results-grid">
+    <!-- Score Summary Panel -->
+    <div class="card score-summary-card">
+        <h3 style="font-size: 1.3rem; font-weight: 700; width: 100%; text-align: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">Summary</h3>
+        
+        <!-- Score Circular Ring -->
+        <div class="score-ring-container">
+            <svg class="score-ring-svg" width="180" height="180" viewBox="0 0 180 180">
+                <circle class="score-ring-bg" cx="90" cy="90" r="75"></circle>
+                <circle class="score-ring-fill" id="scoreRing" cx="90" cy="90" r="75"></circle>
+            </svg>
+            <div class="score-ring-text">
+                <span class="score-num" id="scorePercent">0%</span>
+                <span class="score-total">{{ score }} / {{ total_questions * 10 }} pts</span>
+            </div>
+        </div>
+
+        <div class="result-message" id="resultMsg">Quiz Complete!</div>
+        <p class="result-desc" id="resultDesc">Analyzing score...</p>
+        
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary" style="width: 100%; margin-top: 16px;">
+            Return to Dashboard
+        </a>
+    </div>
+
+    <!-- Review Section -->
+    <div class="review-list">
+        <h2 style="font-size: 1.4rem; font-weight: 700; margin-bottom: 8px;">Review Questions</h2>
+        
+        {% for item in review_data %}
+            {% set is_correct = item.is_correct %}
+            {% set is_skipped = item.user_choice == "" or item.user_choice == "Skipped" %}
+            <div class="card review-card {% if is_skipped %}skipped{% elif is_correct %}correct{% else %}wrong{% endif %}">
+                <div class="review-header">
+                    <span class="question-meta">Question {{ loop.index }} &bull; {{ item.type }}</span>
+                    {% if is_skipped %}
+                        <span class="status-badge skipped">Skipped</span>
+                    {% elif is_correct %}
+                        <span class="status-badge correct">Correct</span>
+                    {% else %}
+                        <span class="status-badge wrong">Incorrect</span>
+                    {% endif %}
+                </div>
+                
+                <div class="question-body" style="font-size: 1.15rem; margin-bottom: 20px;">
+                    {{ item.question_text }}
+                </div>
+
+                <!-- Choices Review -->
+                <div class="review-choices">
+                    {% for choice in item.choices %}
+                        {% set current_letter = chr(65 + loop.index0) %}
+                        
+                        {# Determine highlighting classes #}
+                        {% set choice_class = '' %}
+                        
+                        {# Case 1: Multiple Choice or Fill-in-the-blank #}
+                        {% if item.type == 'MCQ' or item.type == 'FIB' %}
+                            {# Correct Option #}
+                            {% if current_letter == item.correct_answer %}
+                                {% set choice_class = 'correct' %}
+                            {# User selected wrong option #}
+                            {% elif current_letter == item.user_choice and not is_correct %}
+                                {% set choice_class = 'wrong' %}
+                            {% endif %}
+                        
+                        {# Case 2: True/False #}
+                        {% elif item.type == 'TF' %}
+                            {# Correct option #}
+                            {% if choice == item.correct_answer %}
+                                {% set choice_class = 'correct' %}
+                            {# User selected wrong #}
+                            {% elif choice == item.user_choice and not is_correct %}
+                                {% set choice_class = 'wrong' %}
+                            {% endif %}
+                        {% endif %}
+                        
+                        <div class="review-choice-item {{ choice_class }}">
+                            {% if item.type != 'TF' %}
+                                <div class="choice-letter" style="width: 24px; height: 24px; font-size: 0.8rem; background-color: rgba(255,255,255,0.05);">
+                                    {{ current_letter }}
+                                </div>
+                            {% endif %}
+                            <span style="font-weight: 500;">{{ choice }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                {# Context Sentence Box #}
+                {% if item.context %}
+                    <div class="context-box">
+                        <div class="context-label">Source Context</div>
+                        "{{ item.context }}"
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const score = {{ score }};
+        const total = {{ total_questions * 10 }};
+        const percent = total > 0 ? Math.round((score / total) * 100) : 0;
+        
+        // Update percentage score text
+        document.getElementById('scorePercent').textContent = `${percent}%`;
+        
+        // Animate circular SVG indicator
+        const ring = document.getElementById('scoreRing');
+        const radius = ring.r.baseVal.value;
+        const circumference = 2 * Math.PI * radius;
+        
+        // Set stroke width properties dynamically
+        ring.style.strokeDasharray = `${circumference}`;
+        
+        const offset = circumference - (percent / 100) * circumference;
+        
+        // Trigger reflow to animate
+        setTimeout(() => {
+            ring.style.strokeDashoffset = offset;
+        }, 100);
+
+        // Score Messages & Descriptions
+        const msgEl = document.getElementById('resultMsg');
+        const descEl = document.getElementById('resultDesc');
+        
+        if (percent === 100) {
+            msgEl.textContent = 'Perfect Score!';
+            descEl.textContent = 'Incredible! You answered every single question correctly. You have master-level command over this material!';
+            ring.style.stroke = 'var(--success)';
+        } else if (percent >= 80) {
+            msgEl.textContent = 'Excellent Job!';
+            descEl.textContent = 'Great work! You scored high and have a strong understanding of this content. Keep it up!';
+            ring.style.stroke = 'var(--success)';
+        } else if (percent >= 60) {
+            msgEl.textContent = 'Passed!';
+            descEl.textContent = 'Nice effort! You passed the quiz. Review the context sections below to correct the areas you missed.';
+            ring.style.stroke = 'var(--warning)';
+        } else {
+            msgEl.textContent = 'Needs Review';
+            descEl.textContent = 'Keep practicing! Review the detailed answers and contexts below to understand the material better, then retake the quiz.';
+            ring.style.stroke = 'var(--error)';
+        }
+    });
+
+    // Helper: python equivalent of chr()
+    function chr(code) {
+        return String.fromCharCode(code);
+    }
+</script>
+{% endblock %}

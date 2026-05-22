@@ -1,0 +1,206 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Quiz - Quizzable{% endblock %}
+
+{% block content %}
+<div class="config-container">
+    <div class="page-header" style="margin-bottom: 24px;">
+        <div>
+            <h1 class="page-title">Create New Quiz</h1>
+            <p class="page-subtitle">Configure your settings and upload text or a file to generate questions.</p>
+        </div>
+    </div>
+
+    <form id="quizForm" action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data" class="card" style="display: flex; flex-direction: column; gap: 24px;">
+        <!-- Quiz Title -->
+        <div class="form-group">
+            <label for="quizTitle">Quiz Title</label>
+            <input type="text" id="quizTitle" name="quiz_title" class="text-field" placeholder="e.g. Science Chapter 1, Python Functions..." required value="My Quiz">
+        </div>
+
+        <!-- Input Source Tabs -->
+        <div>
+            <div class="tab-nav">
+                <button type="button" class="tab-btn active" onclick="switchTab('fileTab')">File Upload</button>
+                <button type="button" class="tab-btn" onclick="switchTab('textTab')">Direct Text Paste</button>
+            </div>
+
+            <!-- File Upload Pane -->
+            <div id="fileTab" class="tab-pane active">
+                <div class="file-drag-area" id="dropArea" onclick="document.getElementById('fileInput').click()">
+                    <div class="file-drag-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                        </svg>
+                    </div>
+                    <span class="file-drag-text" id="uploadStatusText">Drag & drop your file here, or click to browse</span>
+                    <span class="file-drag-subtext">Supports PDF and TXT (Max 10MB)</span>
+                    <input type="file" id="fileInput" name="pdf_file" accept=".pdf,.txt" style="display: none;" onchange="handleFileSelect(this)">
+                </div>
+            </div>
+
+            <!-- Text Paste Pane -->
+            <div id="textTab" class="tab-pane">
+                <textarea id="textPaste" name="text_paste" class="textarea-input" placeholder="Paste your study material, article, or notes here... (Minimum 50 characters)"></textarea>
+                <div style="text-align: right; margin-top: 8px; font-size: 0.85rem; color: var(--text-dark);" id="charCount">0 characters</div>
+            </div>
+        </div>
+
+        <!-- Configuration Settings -->
+        <div style="border-top: 1px solid var(--border-color); padding-top: 24px; display: flex; flex-direction: column; gap: 20px;">
+            <!-- Questions Count Slider -->
+            <div class="form-group">
+                <label>Number of Questions</label>
+                <div class="slider-container">
+                    <input type="range" name="num_questions" min="3" max="30" value="5" class="slider-input" oninput="document.getElementById('sliderVal').textContent = this.value">
+                    <span class="slider-val" id="sliderVal">5</span>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                <!-- Difficulty Level Selector -->
+                <div class="form-group">
+                    <label for="difficulty">Difficulty Level</label>
+                    <select name="difficulty" id="difficulty" class="select-input">
+                        <option value="easy">Easy</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </div>
+
+                <!-- Question Types Checkboxes -->
+                <div class="form-group">
+                    <label>Question Types</label>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <label class="checkbox-card" style="padding: 10px 16px;">
+                            <input type="checkbox" name="question_types" value="MCQ" checked>
+                            <span class="checkbox-label">
+                                <span class="checkbox-title">Multiple Choice</span>
+                            </span>
+                        </label>
+                        <label class="checkbox-card" style="padding: 10px 16px;">
+                            <input type="checkbox" name="question_types" value="FIB" checked>
+                            <span class="checkbox-label">
+                                <span class="checkbox-title">Fill in the Blanks</span>
+                            </span>
+                        </label>
+                        <label class="checkbox-card" style="padding: 10px 16px;">
+                            <input type="checkbox" name="question_types" value="TF" checked>
+                            <span class="checkbox-label">
+                                <span class="checkbox-title">True / False</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="margin-top: 12px; font-size: 1.05rem;">
+            Generate Quiz
+        </button>
+    </form>
+</div>
+
+<!-- Fullscreen Loader Overlay -->
+<div class="processing-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <span class="processing-title">Generating Your Quiz</span>
+    <span class="processing-subtitle">Analyzing text structure, identifying main subjects, and building distractors...</span>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Tab switching logic
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        
+        document.getElementById(tabId).classList.add('active');
+        event.target.classList.add('active');
+        
+        // Remove 'required' fields depending on which tab is active
+        if (tabId === 'fileTab') {
+            document.getElementById('textPaste').removeAttribute('required');
+            // If no file selected yet, reset fileInput's require if paste was empty, otherwise keep simple validation
+        } else {
+            document.getElementById('fileInput').removeAttribute('required');
+            document.getElementById('textPaste').setAttribute('required', 'required');
+        }
+    }
+
+    // Characters counter for textarea
+    const textarea = document.getElementById('textPaste');
+    const charCount = document.getElementById('charCount');
+    textarea.addEventListener('input', () => {
+        charCount.textContent = `${textarea.value.length} characters`;
+    });
+
+    // File drag and drop visual logic
+    const dropArea = document.getElementById('dropArea');
+    const statusText = document.getElementById('uploadStatusText');
+    const fileInput = document.getElementById('fileInput');
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropArea.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            dropArea.classList.add('dragover');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            dropArea.classList.remove('dragover');
+        }, false);
+    });
+
+    dropArea.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            handleFileSelect(fileInput);
+        }
+    });
+
+    function handleFileSelect(input) {
+        if (input.files && input.files[0]) {
+            const filename = input.files[0].name;
+            statusText.textContent = `Selected File: ${filename}`;
+            dropArea.style.borderColor = 'var(--primary)';
+        }
+    }
+
+    // Submit Validation & Loading Indicator
+    const form = document.getElementById('quizForm');
+    form.addEventListener('submit', (e) => {
+        // Validate at least one checkbox is checked
+        const checkedTypes = document.querySelectorAll('input[name="question_types"]:checked');
+        if (checkedTypes.length === 0) {
+            e.preventDefault();
+            alert('Please select at least one question type (Multiple Choice, Fill in the Blanks, or True/False).');
+            return;
+        }
+
+        // Validate text content exists
+        const fileTabActive = document.getElementById('fileTab').classList.contains('active');
+        if (fileTabActive) {
+            if (!fileInput.files || fileInput.files.length === 0) {
+                e.preventDefault();
+                alert('Please select or drag a file to upload.');
+                return;
+            }
+        } else {
+            if (textarea.value.trim().length < 50) {
+                e.preventDefault();
+                alert('Please paste at least 50 characters of study material to generate questions.');
+                return;
+            }
+        }
+
+        // Show Overlay
+        document.getElementById('loadingOverlay').style.display = 'flex';
+    });
+</script>
+{% endblock %}

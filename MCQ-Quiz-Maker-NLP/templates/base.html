@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Quizzable - Text to Quiz Generator{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="{% if request.endpoint in ['login', 'signup'] %}auth-body{% endif %}">
+    {% if request.endpoint in ['login', 'signup'] %}
+        <main style="width: 100%; display: flex; align-items: center; justify-content: center;">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-container" style="max-width: 440px; margin-bottom: 16px;">
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+            {% block auth_content %}{% endblock %}
+        </main>
+    {% else %}
+        <div class="app-container">
+            <!-- Sidebar Navigation -->
+            <aside class="sidebar">
+                <div class="logo-section">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                    </svg>
+                    <span class="logo-title">QUIZZABLE</span>
+                </div>
+                <nav class="nav-links">
+                    <li class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                        <a href="{{ url_for('dashboard') }}">
+                            <!-- Dashboard icon -->
+                            <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="7" height="9" rx="1"></rect>
+                                <rect x="14" y="3" width="7" height="5" rx="1"></rect>
+                                <rect x="14" y="12" width="7" height="9" rx="1"></rect>
+                                <rect x="3" y="16" width="7" height="5" rx="1"></rect>
+                            </svg>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="nav-item {% if request.endpoint == 'create_quiz_view' %}active{% endif %}">
+                        <a href="{{ url_for('create_quiz_view') }}">
+                            <!-- Plus icon -->
+                            <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            <span>Create Quiz</span>
+                        </a>
+                    </li>
+                    <li class="nav-item {% if request.endpoint == 'history' %}active{% endif %}">
+                        <a href="{{ url_for('history') }}">
+                            <!-- History/Clock icon -->
+                            <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            <span>Quiz History</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ url_for('logout') }}" style="color: var(--error);">
+                            <!-- Logout icon -->
+                            <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                                <polyline points="16 17 21 12 16 7"></polyline>
+                                <line x1="21" y1="12" x2="9" y2="12"></line>
+                            </svg>
+                            <span>Log Out</span>
+                        </a>
+                    </li>
+                </nav>
+                
+                {% if current_user %}
+                <div class="sidebar-profile">
+                    <div class="profile-avatar">
+                        {{ current_user.username[0] | upper }}
+                    </div>
+                    <div class="profile-info">
+                        <span class="profile-name">{{ current_user.username }}</span>
+                        <span class="profile-label">Student / Educator</span>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="sidebar-footer">
+                    &copy; 2026 Quizzable AI
+                </div>
+            </aside>
+
+            <!-- Main Workspace -->
+            <main class="main-content">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div class="flash-container">
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }}">
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    {% endif %}
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
